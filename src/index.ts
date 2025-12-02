@@ -3,6 +3,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import authRouter from './routes/auth';
+import ticketRoutes from './routes/ticketRoutes'; 
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(
 app.use(express.json());
 
 app.use('/api/auth', authRouter);
+app.use('/api/tickets', ticketRoutes);
 
 // 1. Get the connection string from .env
 const MONGO_URI = process.env.MONGO_URI;
