@@ -1,14 +1,16 @@
 import express from 'express';
-import { createTicket, getMyTickets } from '../controllers/ticketController';
-// Import the middleware you created during the Login/Auth phase
-// (Make sure this path points to your actual auth middleware file)
+import { createTicket, getMyTickets, getTicket } from '../controllers/ticketController';
 import { protect } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
-// Apply 'protect' here to check the token BEFORE allowing access
+// Route for /api/tickets
 router.route('/')
-  .get(protect, getMyTickets)   // 1. Check Token -> 2. Get Tickets
-  .post(protect, createTicket); // 1. Check Token -> 2. Create Ticket
+  .get(protect, getMyTickets)   // Get all my tickets
+  .post(protect, createTicket); // Create a new ticket
+
+// Route for /api/tickets/:id (This was missing!)
+router.route('/:id')
+  .get(protect, getTicket);     // Get single ticket details
 
 export default router;
