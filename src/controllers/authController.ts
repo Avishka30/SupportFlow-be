@@ -1,28 +1,25 @@
 import { Request, Response } from 'express';
-import { User, IUser } from '../models/User'; // 1. Import IUser interface
+import jwt from 'jsonwebtoken';
+import { User, IUser } from '../models/User';
 import { generateTokens } from '../utils/tokenUtils';
 
-// --- REGISTER (No Tokens, Just Create User) ---
+// --- REGISTER ---
 export const registerUser = async (req: Request, res: Response) => {
     try {
         const { firstName, lastName, email, password } = req.body;
 
-        // 1. Validation
         if (!firstName || !lastName || !email || !password) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
-        // 2. Check duplicate
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(409).json({ message: 'User already exists' });
         }
 
-        // 3. Create User
         const newUser = new User({ firstName, lastName, email, password });
         await newUser.save();
 
-        // 4. Send Response (NO TOKENS)
         res.status(201).json({
             message: 'User registered successfully. Please login to continue.',
             user: {
@@ -40,34 +37,28 @@ export const registerUser = async (req: Request, res: Response) => {
     }
 };
 
-// --- LOGIN (Generate Tokens Here) ---
+// --- LOGIN ---
 export const loginUser = async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Validation
         if (!email || !password) {
             return res.status(400).json({ message: 'Email and password are required' });
         }
 
-        // 2. Find User
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
-        // 3. Verify Password
-        // FIX: Cast user to IUser so TypeScript sees the comparePassword method
         const isMatch = await (user as IUser).comparePassword(password);
         
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
-        // 4. Generate Tokens (Access & Refresh)
         const tokens = generateTokens({ id: user._id.toString(), role: user.role });
 
-        // 5. Send Response
         res.status(200).json({
             message: 'Login successful',
             user: {
@@ -77,11 +68,47 @@ export const loginUser = async (req: Request, res: Response) => {
                 lastName: user.lastName,
                 role: user.role
             },
-            ...tokens // Returns accessToken and refreshToken
+            ...tokens 
         });
 
     } catch (error) {
         console.error('Login Error:', error);
         res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// --- REFRESH TOKEN ---
+export const refreshAccessToken = async (req: Request, res: Response) => {
+    console.log("➡️ Refresh Request Received by Controller"); // DEBUG LOG 1
+
+    const { refreshToken } = req.body;
+  
+    if (!refreshToken) {
+      console.log("❌ No refresh token provided in body"); // DEBUG LOG 2
+      return res.status(401).json({ message: 'No refresh token provided' });
+    }
+  
+    try {
+      // 1. Verify the Refresh Token
+      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as string) as any;
+      console.log("✅ Refresh Token Signature Verified"); // DEBUG LOG 3
+  
+      // 2. Generate a NEW Access Token using Env variable
+      const expiry = process.env.ACCESS_TOKEN_EXPIRY ? process.env.ACCESS_TOKEN_EXPIRY.trim() : '15m';
+
+      const accessToken = jwt.sign(
+        { id: decoded.id, role: decoded.role }, 
+        process.env.JWT_ACCESS_SECRET as string, 
+        { expiresIn: expiry as any } 
+      );
+  
+      console.log("✅ New Access Token Generated"); // DEBUG LOG 4
+
+      // 3. Send the new access token back
+      res.json({ accessToken });
+  
+    } catch (error: any) {
+      console.error("❌ Refresh Failed:", error.message); // DEBUG LOG 5
+      res.status(403).json({ message: 'Invalid or expired refresh token' });
     }
 };
