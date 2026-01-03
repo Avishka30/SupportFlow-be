@@ -5,6 +5,7 @@ import cors from 'cors';
 import authRouter from './routes/auth';
 import ticketRoutes from './routes/ticketRoutes'; 
 import messageRoutes from './routes/messageRoutes';
+import aiRoutes from './routes/aiRoutes';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/ai', aiRoutes);
 
 // 1. Get the connection string from .env
 const MONGO_URI = process.env.MONGO_URI;
