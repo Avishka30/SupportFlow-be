@@ -138,3 +138,44 @@ export const getTicket = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server Error: Unable to fetch ticket' });
   }
 };
+
+// --- ADMIN FUNCTIONS (New) ---
+
+// @desc    Get ALL tickets from ALL users
+// @route   GET /api/admin/tickets
+export const getAllTickets = async (req: AuthRequest, res: Response) => {
+  try {
+    // .populate('userId') fills in the user's Name and Email so Admin knows who asked
+    const tickets = await Ticket.find({})
+      .populate('userId', 'firstName lastName email') 
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(tickets);
+  } catch (error) {
+    console.error("Admin Fetch Error:", error);
+    res.status(500).json({ message: 'Server Error: Unable to fetch all tickets' });
+  }
+};
+
+// @desc    Update ticket status (e.g. Open -> Resolved)
+// @route   PATCH /api/admin/tickets/:id/status
+export const updateTicketStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { status } = req.body; // Expecting { "status": "resolved" }
+    const { id } = req.params;
+
+    const ticket = await Ticket.findById(id);
+
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+
+    ticket.status = status;
+    await ticket.save();
+
+    res.status(200).json(ticket);
+  } catch (error) {
+    console.error("Admin Update Error:", error);
+    res.status(500).json({ message: 'Server Error: Unable to update status' });
+  }
+};
